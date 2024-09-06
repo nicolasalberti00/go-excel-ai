@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	excelFilePathEnvKey = "EXCEL_FILE_PATH"
-	sheetName           = "Sheet1"
+	OpenAIAPIKey = "OPENAI_API_KEY"
 )
 
 var (
@@ -25,12 +24,14 @@ var (
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	modelName := flag.String("model", "", "Preferred AI model name (e.g., gpt-4, llama3.1)")
+	modelName := flag.String("model", "", "Preferred AI model name (e.g., gpt-4o, llama3.1)")
 	filePath := flag.String("file", "", "Path to the Excel sheet file")
 	sheetName := flag.String("sheetName", "", "Name of the sheet chosen")
 	cell := flag.String("cell", "", "Cell to modify (e.g. A1)")
 	prompt := flag.String("prompt", "", "AI prompt for generating text")
 	flag.Parse()
+
+	apiKey := os.Getenv(OpenAIAPIKey)
 
 	//Input validation
 	if *modelName == "" || *filePath == "" || *sheetName == "" || *cell == "" || *prompt == "" {
@@ -56,7 +57,7 @@ func main() {
 	slog.InfoContext(ctx, "Value for chosen cell", "cell", *cell, "currentValue", currentValue)
 
 	// Select AI Model
-	aiProvider, err := providers.AIProviderFactory(*modelName)
+	aiProvider, err := providers.AIProviderFactory(apiKey, *modelName)
 	if err != nil {
 		fmt.Printf("Error selecting AI provider: %v", err)
 		return

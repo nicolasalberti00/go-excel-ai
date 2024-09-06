@@ -3,10 +3,10 @@ package providers
 import "fmt"
 
 // AIProviderFactory returns the appropriate AI provider based on the model name
-func AIProviderFactory(modelName string) (AIModel, error) {
+func AIProviderFactory(apiKey, modelName string) (AIModel, error) {
 	switch modelName {
-	case "gpt":
-		return &OpenAI{}, nil
+	case "gpt-4o-mini":
+		return NewOpenAI(apiKey), nil
 	case "llama3.1":
 		return &Ollama{modelName: modelName}, nil
 	default:
