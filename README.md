@@ -1,12 +1,12 @@
 # Go-excel-AI
 
-This is a project made to manipulate an Excel file and replace the cell contents after an AI prompt.
-I'm working on this project whenever I have free time, and for fun.
+This project aims to be able to edit cells in Excel sheets after an AI prompt. I'm committing to this project whenever I can,
+as I intend to use it also as a way to improve my skills.
 
 ## Usage
 
-To run the program you need to have Go installed and then, after cloning the repo, inside the `cmd` folder you just run:
+In order to run the program, you need to have Go installed, cloned the repository and then, inside the `cmd` folder you need to run:
 
 ```
-go run main.go --model MODEL_NAME --file EXCEL_FILEPATH --sheetName SHEET_NAME --cell CELL_TO_BE_MODIFIED --prompt 'PROMPT'
+go run main.go --model MODEL_NAME --file FILEPATH --sheetName SHEET_NAME --cell CELL_NAME --prompt 'PROMPT'
 ```
