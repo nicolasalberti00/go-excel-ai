@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/tmc/langchaingo/llms"
+	"github.com/nicolasalberti00/go-excel-ai/internal/providers"
 	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/xuri/excelize/v2"
 )
@@ -17,106 +17,69 @@ const (
 	sheetName           = "Sheet1"
 )
 
+var (
+	llm openai.LLM
+	err error
+)
+
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	modelName := flag.String("model", "", "preferred ollama model name")
+	modelName := flag.String("model", "", "Preferred AI model name (e.g., gpt-4, llama3.1)")
+	filePath := flag.String("file", "", "Path to the Excel sheet file")
+	sheetName := flag.String("sheetName", "", "Name of the sheet chosen")
+	cell := flag.String("cell", "", "Cell to modify (e.g. A1)")
+	prompt := flag.String("prompt", "", "AI prompt for generating text")
 	flag.Parse()
+
+	//Input validation
+	if *modelName == "" || *filePath == "" || *sheetName == "" || *cell == "" || *prompt == "" {
+		fmt.Printf("Error: all flags (model, file, sheetName, cell, prompt) are required")
+		return
+	}
 
 	ctx := context.Background()
 
-	var llm *openai.LLM
-	var err error
-
-	if *modelName == "gpt" {
-		llm, err = openai.New()
-		if err != nil {
-			slog.ErrorContext(ctx, "Error when starting model", "error", err)
-			return
-		}
-	}
-	//if *modelName == "llama3.1" {
-	//	localLLM, err := ollama.New(ollama.WithModel(*modelName))
-	//}
-
-	excelFilePath := os.Getenv(excelFilePathEnvKey)
-
-	file, err := excelize.OpenFile(excelFilePath)
+	// Load the Excel file
+	f, err := excelize.OpenFile(*filePath)
 	if err != nil {
-		slog.Error("Error while opening excel file", "error", err, "path", excelFilePath)
+		fmt.Printf("Error opening Excel file: %v", err)
 		return
 	}
-	defer func() {
-		// Close the spreadsheet.
-		if err := file.Close(); err != nil {
-			slog.Error("Error while closing excel file", "error", err)
-			return
-		}
-	}()
 
-	// Text will be found from excel file
-	rows, err := file.GetRows(sheetName)
-	slog.Info("Columns length", "length", len(rows))
-	for i, row := range rows {
-		if len(row) > 0 {
-			textValue := row[0]
-			response, err := generateStreamedResponse(ctx, llm, textValue)
-			err = addResponseToCell(file, response, sheetName, fmt.Sprintf("B%d", i+1))
-			if err != nil {
-				return
-			}
-		}
-	}
-
-	err = file.Save()
+	// Fetch the current value in the specified cell
+	currentValue, err := f.GetCellValue(*sheetName, *cell)
 	if err != nil {
-		slog.Error("Error while saving sheet", "Error", err)
+		fmt.Sprintf("Error reading cell %s from sheet %s: %v", *sheetName, *cell, err)
 		return
 	}
-	slog.Info("Sheet saved correctly")
-	return
-}
+	slog.InfoContext(ctx, "Value for chosen cell", "cell", *cell, "currentValue", currentValue)
 
-func generateStreamedResponse(ctx context.Context, llm *openai.LLM, textToAnalyze string) (string, error) {
-
-	defaultPrompt := `Sei un ecologo ed esperto di scienze forestali con una vasta conoscenza della lingua italiana.
-	Il tuo compito è correggere e migliorare il seguente testo, concentrandoti su:
-	1. Accuratezza scientifica nel campo delle scienze forestali
-	2. Correttezza grammaticale e sintattica
-	3. Chiarezza e fluidità espositiva
-	4. Uso appropriato della terminologia specifica del settore
-	5. Coerenza logica e strutturale del testo
-	6. Scrittura in linguaggio tecnico, specialmente con riferimento a Natura 2000
-
-	All'interno di questo testo sono presenti alcuni acronimi, qui la definizione:
-	- ATO, Ambito Territoriale Omogeneo;
-
-	Non è necessaria nessuna interazione o richiesta di correzione, rispondi con ciò che ritieni corretto.
-	Non servono annotazioni, deve essere semplicemente dato come risposta il testo che hai corretto.
-	La risposta non deve superare le 200 parole, mantenendo i punti principali del testo che analizzerai.
-	Eventuali parole in maisucolo vanno trattate come nomi propri, quindi riportate alla formattazione normale.
-	Ecco il testo da analizzare e correggere: `
-
-	query := defaultPrompt + textToAnalyze
-
-	answer, err := llms.GenerateFromSinglePrompt(ctx, llm, query,
-		llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
-			fmt.Printf("%s", chunk)
-			return nil
-		}))
+	// Select AI Model
+	aiProvider, err := providers.AIProviderFactory(*modelName)
 	if err != nil {
-		slog.ErrorContext(ctx, "Error while returning completion", "err", err)
-		return "", err
+		fmt.Printf("Error selecting AI provider: %v", err)
+		return
 	}
 
-	return answer, nil
-}
-
-func addResponseToCell(file *excelize.File, response, sheetName, cellName string) error {
-	err := file.SetCellValue(sheetName, cellName, response)
+	newValue, err := aiProvider.GenerateText(ctx, *prompt)
 	if err != nil {
-		slog.Error("Could not set value for the specified cell", "error", err, "sheetName", sheetName, "cellName", cellName, "value", response)
-		return err
+		fmt.Printf("Error generating text: %v", err)
+		return
 	}
-	return nil
+
+	err = f.SetCellValue(*sheetName, *cell, newValue)
+	if err != nil {
+		fmt.Printf("Error when setting cell %s in sheet %s: %v", *cell, *sheetName, err)
+		return
+	}
+
+	err = f.Save()
+	if err != nil {
+		fmt.Printf("Error saving Excel file: %v", err)
+		return
+	}
+
+	slog.InfoContext(ctx, "Value updated successfully", "newValue", newValue)
+
 }
