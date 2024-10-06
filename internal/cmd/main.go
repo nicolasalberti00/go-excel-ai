@@ -8,17 +8,11 @@ import (
 	"os"
 
 	"github.com/nicolasalberti00/go-excel-ai/internal/providers"
-	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/xuri/excelize/v2"
 )
 
 const (
 	OpenAIAPIKey = "OPENAI_API_KEY"
-)
-
-var (
-	llm openai.LLM
-	err error
 )
 
 func main() {
@@ -51,7 +45,7 @@ func main() {
 	// Fetch the current value in the specified cell
 	currentValue, err := f.GetCellValue(*sheetName, *cell)
 	if err != nil {
-		fmt.Sprintf("Error reading cell %s from sheet %s: %v", *sheetName, *cell, err)
+		fmt.Printf("Error reading cell %s from sheet %s: %v", *sheetName, *cell, err)
 		return
 	}
 	slog.InfoContext(ctx, "Value for chosen cell", "cell", *cell, "currentValue", currentValue)

@@ -8,7 +8,11 @@ func AIProviderFactory(apiKey, modelName string) (AIModel, error) {
 	case "gpt-4o-mini":
 		return NewOpenAI(apiKey), nil
 	case "llama3.1":
-		return &Ollama{modelName: modelName}, nil
+		llm, err := NewOllama(modelName)
+		if err != nil {
+			return nil, fmt.Errorf("error during ollama model initialization: %s", err)
+		}
+		return llm, nil
 	default:
 		return nil, fmt.Errorf("unsupported model name: %s", modelName)
 	}

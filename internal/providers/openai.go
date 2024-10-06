@@ -10,18 +10,6 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-const (
-	ContentTypeHeaderKey   = "Content-Type"
-	ApplicationJsonValue   = "application/json"
-	AuthorizationHeaderKey = "Authorization"
-	OpenAICompletionsURL   = "https://api.openai.com/v1/chat/completions"
-)
-
-var (
-	ErrOpenAIResponse = errors.New("error response from OpenAI")
-	ErrNoOutput       = errors.New("no output received from OpenAI")
-)
-
 type OpenAI struct {
 	client *openai.Client
 }
